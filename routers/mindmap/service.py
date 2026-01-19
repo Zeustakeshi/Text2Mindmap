@@ -1,4 +1,6 @@
+import asyncio
 import json
+from functools import partial
 from io import BytesIO
 from typing import AsyncGenerator
 
@@ -8,7 +10,7 @@ from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 from pypdf import PdfReader
 
 from config.Setttings import settings
-from core.llm import llm
+from core.llm import async_llm
 from routers.mindmap.ctm_validator import validate_ctm
 from routers.mindmap.dto import StreamStatus, StreamEvent
 from routers.mindmap.prompt import mindmap_generate
@@ -91,7 +93,9 @@ async def generate_mindmap_from_web_url(site_url: str) -> AsyncGenerator[str, No
         {"url": site_url}
     )
     
-    downloaded = trafilatura.fetch_url(site_url)
+    # Run blocking fetch_url in thread executor to avoid blocking event loop
+    loop = asyncio.get_event_loop()
+    downloaded = await loop.run_in_executor(None, trafilatura.fetch_url, site_url)
     
     if not downloaded:
         yield create_event(
@@ -108,12 +112,15 @@ async def generate_mindmap_from_web_url(site_url: str) -> AsyncGenerator[str, No
         {"url": site_url}
     )
     
-    content = trafilatura.extract(
+    # Run blocking extract in thread executor
+    extract_func = partial(
+        trafilatura.extract,
         downloaded,
         output_format="markdown",
         include_tables=True,
         include_images=False
     )
+    content = await loop.run_in_executor(None, extract_func)
     
     if not content:
         yield create_event(
@@ -145,8 +152,8 @@ async def generate_mindmap(content: str) -> AsyncGenerator[str, None]:
             {"attempt": attempt, "max_retries": max_retry}
         )
 
-        # Invoke LLM
-        response = llm.invoke(messages).content
+        # Invoke LLM asynchronously to avoid blocking event loop
+        response = (await async_llm.ainvoke(messages)).content
 
         # Emit VALIDATING status
         yield create_event(
