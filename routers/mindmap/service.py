@@ -10,13 +10,13 @@ from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 from pypdf import PdfReader
 
 from config.Setttings import settings
-from core.llm import async_llm
+from core.llm import get_llm
 from routers.mindmap.ctm_validator import validate_ctm
-from routers.mindmap.dto import StreamStatus, StreamEvent
+from routers.mindmap.dto import StreamStatus, StreamEvent, LLMConfig
 from routers.mindmap.prompt import mindmap_generate
 
 
-async def generate_mindmap_from_text(message: str) -> AsyncGenerator[str, None]:
+async def generate_mindmap_from_text(message: str, llm_config: LLMConfig | None = None) -> AsyncGenerator[str, None]:
     """
     Generate mindmap from text with streaming status updates.
 
@@ -35,7 +35,7 @@ async def generate_mindmap_from_text(message: str) -> AsyncGenerator[str, None]:
         {"text_length": len(message)}
     )
     
-    async for event in generate_mindmap(message):
+    async for event in generate_mindmap(message, llm_config):
         yield event
 
 
@@ -60,7 +60,7 @@ def extract_text_from_pdf(contents: bytes) -> str:
         )
 
 
-async def generate_mindmap_from_file(text: str, filename: str = "file.pdf") -> AsyncGenerator[str, None]:
+async def generate_mindmap_from_file(text: str, filename: str = "file.pdf", llm_config: LLMConfig | None = None) -> AsyncGenerator[str, None]:
     """
     Generate mindmap from pre-extracted text with detailed status updates.
     
@@ -75,11 +75,11 @@ async def generate_mindmap_from_file(text: str, filename: str = "file.pdf") -> A
         {"text_length": len(text), "filename": filename}
     )
     
-    async for event in generate_mindmap(text):
+    async for event in generate_mindmap(text, llm_config):
         yield event
 
 
-async def generate_mindmap_from_web_url(site_url: str) -> AsyncGenerator[str, None]:
+async def generate_mindmap_from_web_url(site_url: str, llm_config: LLMConfig | None = None) -> AsyncGenerator[str, None]:
     """
     Generate mindmap from web URL with detailed status updates.
     
@@ -130,12 +130,12 @@ async def generate_mindmap_from_web_url(site_url: str) -> AsyncGenerator[str, No
         )
         return
     
-    async for event in generate_mindmap(content):
+    async for event in generate_mindmap(content, llm_config):
         yield event
 
 
 # Helper function
-async def generate_mindmap(content: str) -> AsyncGenerator[str, None]:
+async def generate_mindmap(content: str, llm_config: LLMConfig | None = None) -> AsyncGenerator[str, None]:
     max_retry = settings.mindmap_generate_max_retry
     retry_cnt = max_retry
     attempt = 1
@@ -143,6 +143,9 @@ async def generate_mindmap(content: str) -> AsyncGenerator[str, None]:
         SystemMessage(mindmap_generate),
         HumanMessage(content)
     ]
+
+    # Initialize correct LLM based on config
+    llm = get_llm(llm_config)
 
     while retry_cnt > 0:
         # Emit PROCESSING status
@@ -153,7 +156,7 @@ async def generate_mindmap(content: str) -> AsyncGenerator[str, None]:
         )
 
         # Invoke LLM asynchronously to avoid blocking event loop
-        response = (await async_llm.ainvoke(messages)).content
+        response = (await llm.ainvoke(messages)).content
 
         # Emit VALIDATING status
         yield create_event(

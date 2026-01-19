@@ -15,6 +15,10 @@
     <!-- Babel for In-browser JSX -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Playwrite+VN:wght@100..400&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
+
     <style>
         body { margin: 0; padding: 0; overflow: hidden; background-color: #f8fafc; }
         
@@ -300,6 +304,40 @@ Chí Phèo: Lời chửi và nỗi khổ|id:1
             'bg-violet-300 border-violet-400 text-violet-900'
             ],
             lines: ['#155e75', '#0284c7', '#3b82f6', '#6366f1', '#8b5cf6']
+        },
+        lemoo_light: {
+            id: 'lemoo_light',
+            name: 'Lemoo Light',
+            background: 'bg-white',
+            dotColor: 'border-white',
+            nodes: [
+                'bg-white border-white text-slate-800 text-xl font-bold rounded-none shadow-none', // Level 0 (Root)
+                'bg-blue-500 border-blue-600 text-white rounded-[15px] shadow-sm font-semibold', // Level 1 (Seller/Buyer/Admin)
+                'bg-transparent border-transparent text-slate-700 font-medium rounded-none shadow-none', // Level 2+
+                'bg-transparent border-transparent text-slate-600 font-normal rounded-none shadow-none',
+                'bg-transparent border-transparent text-slate-500 font-normal rounded-none shadow-none'
+            ],
+            lines: ['#3b82f6', '#8b5cf6', '#ec4899', '#f97316', '#10b981'],
+            accentNodes: [
+                'bg-blue-500',   // 0th child of root
+                'bg-purple-500', // 1st child of root
+                'bg-pink-500',   // 2nd child of root
+            ]
+        },
+        lemoo_dark: {
+            id: 'lemoo_dark',
+            name: 'Lemoo Dark',
+            background: 'bg-[#2c3338]',
+            dotColor: 'border-[#2c3338]',
+            nodes: [
+                'bg-transparent border-transparent text-white text-xl font-bold italic rounded-none shadow-none', 
+                'bg-transparent border-transparent text-white font-semibold rounded-none shadow-none',
+                'bg-transparent border-transparent text-gray-300 font-medium rounded-none shadow-none italic',
+                'bg-transparent border-transparent text-gray-400 font-normal rounded-none shadow-none italic',
+                'bg-transparent border-transparent text-gray-500 font-normal rounded-none shadow-none'
+            ],
+            lines: ['#ffffff', '#ffffff', '#ffffff', '#ffffff', '#ffffff'],
+            fontFamily: "'Playwrite VN', cursive"
         }
         };
 
@@ -339,11 +377,28 @@ Chí Phèo: Lời chửi và nỗi khổ|id:1
             }
         }, []);
 
-        const getNodeClass = (depth) => {
+        const getNodeClass = (node) => {
+            const depth = node.depth;
+            if (currentThemeId === 'lemoo_light' && depth === 1) {
+                const index = parseInt(node.id.split('-').pop());
+                const accentClass = currentTheme.accentNodes[index % currentTheme.accentNodes.length] || currentTheme.accentNodes[0];
+                return `${accentClass} text-white rounded-[15px] shadow-sm font-semibold p-4`;
+            }
+            if (currentThemeId === 'lemoo_dark') {
+                return currentTheme.nodes[depth] || currentTheme.nodes[currentTheme.nodes.length - 1];
+            }
             return currentTheme.nodes[depth] || currentTheme.nodes[currentTheme.nodes.length - 1];
         };
 
-        const getLineColor = (depth) => {
+        const getLineColor = (node) => {
+            const depth = node.depth;
+            if (currentThemeId === 'lemoo_light' && depth > 0) {
+                const pathParts = node.id.split('-');
+                if (pathParts.length > 1) {
+                    const topLevelIndex = parseInt(pathParts[1]);
+                    return currentTheme.lines[topLevelIndex % currentTheme.lines.length] || currentTheme.lines[0];
+                }
+            }
             return currentTheme.lines[depth] || currentTheme.lines[currentTheme.lines.length - 1];
         };
 
@@ -376,13 +431,41 @@ Chí Phèo: Lời chửi và nỗi khổ|id:1
         // --- Toggle Collapse ---
         const toggleNode = (nodeId) => {
             setCollapsedNodes(prev => {
-            const next = new Set(prev);
-            if (next.has(nodeId)) {
-                next.delete(nodeId);
-            } else {
-                next.add(nodeId);
-            }
-            return next;
+                const next = new Set(prev);
+                if (next.has(nodeId)) {
+                    // Expanding: just remove from set
+                    next.delete(nodeId);
+                } else {
+                    // Collapsing: add to set AND collapse all children recursively
+                    next.add(nodeId);
+                    
+                    const recursiveCollapse = (node, path) => {
+                        if (node.children) {
+                            node.children.forEach((child, idx) => {
+                                const childPath = `${path}-${idx}`;
+                                next.add(childPath);
+                                recursiveCollapse(child, childPath);
+                            });
+                        }
+                    };
+
+                    // Helper to find the node in parsedData matching the nodeId path
+                    const findAndProcess = (rootNode, currentPath) => {
+                        if (currentPath === nodeId) {
+                            recursiveCollapse(rootNode, currentPath);
+                            return true;
+                        }
+                        if (rootNode.children) {
+                            for (let i = 0; i < rootNode.children.length; i++) {
+                                if (findAndProcess(rootNode.children[i], `${currentPath}-${i}`)) return true;
+                            }
+                        }
+                        return false;
+                    };
+                    
+                    findAndProcess(parsedData, "0");
+                }
+                return next;
             });
         };
 
@@ -622,11 +705,21 @@ Chí Phèo: Lời chửi và nỗi khổ|id:1
                                     <path 
                                         d={pathData} 
                                         fill="none" 
-                                        stroke={getLineColor(link.target.depth)} 
-                                        strokeWidth="2"
-                                        strokeOpacity={currentThemeId === 'dark' ? "0.4" : "0.6"}
+                                        stroke={getLineColor(link.target)} 
+                                        strokeWidth="2.5"
+                                        strokeOpacity={currentThemeId === 'dark' || currentThemeId === 'lemoo_dark' ? "0.5" : "0.7"}
                                         className="transition-colors duration-500"
                                     />
+                                    {(currentThemeId === 'lemoo_light' || currentThemeId === 'lemoo_dark') && (
+                                        <circle 
+                                            cx={startX} 
+                                            cy={startY} 
+                                            r="4" 
+                                            fill="white"
+                                            stroke={getLineColor(link.target)}
+                                            strokeWidth="2"
+                                        />
+                                    )}
                                 </g>
                             );
                         })}
@@ -635,13 +728,14 @@ Chí Phèo: Lời chửi và nỗi khổ|id:1
                     {layoutTree.nodes.map((node) => (
                         <div
                             key={node.id}
-                            className={`mindmap-node absolute flex items-center justify-center p-3 rounded-xl transition-all duration-300 hover:scale-105 hover:z-20 cursor-default select-none ${getNodeClass(node.depth)}`}
+                            className={`mindmap-node absolute flex items-center justify-center p-3 rounded-xl transition-all duration-300 hover:scale-105 hover:z-20 cursor-default select-none ${getNodeClass(node)}`}
                             style={{
                                 left: node.x,
                                 top: node.y,
                                 width: NODE_WIDTH,
                                 minHeight: NODE_HEIGHT_BASE,
-                                zIndex: 10 + node.depth
+                                zIndex: 10 + node.depth,
+                                fontFamily: currentTheme.fontFamily || 'inherit'
                             }}
                         >
                             <div className="text-center w-full">

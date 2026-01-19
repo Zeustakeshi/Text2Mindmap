@@ -32,6 +32,19 @@ class StreamStatus(str, Enum):
     ERROR = "ERROR"
 
 
+class LLMType(str, Enum):
+    """Supported LLM types"""
+    OLLAMA = "ollama"
+    GEMINI = "gemini"
+
+
+class LLMConfig(BaseModel):
+    """LLM configuration for custom API keys"""
+    llm_type: LLMType = LLMType.OLLAMA
+    api_key: str | None = None  # Required for Gemini
+
+
 class MindmapRequest(BaseModel):
     """Request body for mindmap generation"""
     text: str
+    llm_config: LLMConfig | None = None

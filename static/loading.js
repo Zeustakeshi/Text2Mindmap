@@ -653,7 +653,10 @@ async function generateFromText(text) {
     const response = await fetch(`${API_BASE}/generate/stream`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text })
+        body: JSON.stringify({ 
+            text: text,
+            llm_config: requestData.llm_config 
+        })
     });
 
     if (!response.ok) {
@@ -666,7 +669,14 @@ async function generateFromText(text) {
 async function generateFromUrl(url) {
     addStep('CONNECTING', 'Đang kết nối đến server...');
 
-    const response = await fetch(`${API_BASE}/web/generate/stream?site_url=${encodeURIComponent(url)}`, {
+    const llmConfig = requestData.llm_config || {};
+    const params = new URLSearchParams({
+        site_url: url,
+        llm_type: llmConfig.llm_type || 'ollama'
+    });
+    if (llmConfig.api_key) params.append('api_key', llmConfig.api_key);
+
+    const response = await fetch(`${API_BASE}/web/generate/stream?${params.toString()}`, {
         method: 'POST'
     });
 
@@ -695,7 +705,13 @@ async function generateFromFile(fileData, fileName) {
     const formData = new FormData();
     formData.append('file', file);
 
-    const response = await fetch(`${API_BASE}/file/generate/stream`, {
+    const llmConfig = requestData.llm_config || {};
+    const params = new URLSearchParams({
+        llm_type: llmConfig.llm_type || 'ollama'
+    });
+    if (llmConfig.api_key) params.append('api_key', llmConfig.api_key);
+
+    const response = await fetch(`${API_BASE}/file/generate/stream?${params.toString()}`, {
         method: 'POST',
         body: formData
     });

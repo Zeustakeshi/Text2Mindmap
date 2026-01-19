@@ -625,6 +625,12 @@ Ví dụ: Tóm tắt tác phẩm Chí Phèo của Nam Cao, bao gồm các nhân 
                                 <line x1="15" y1="15" x2="12" y2="12"/>
                             </svg>
                         </button>
+                        <button id="settings-btn" class="action-btn" title="Cấu hình LLM">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="3"/>
+                                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                            </svg>
+                        </button>
                     </div>
                     <span class="char-count">0 ký tự</span>
                     <button id="send-btn" class="send-btn">
@@ -659,6 +665,34 @@ Ví dụ: Tóm tắt tác phẩm Chí Phèo của Nam Cao, bao gồm các nhân 
             <div class="modal-actions">
                 <button id="url-cancel-btn" class="modal-btn modal-btn-secondary">Hủy</button>
                 <button id="url-submit-btn" class="modal-btn modal-btn-primary">Tạo Mindmap</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal-overlay">
+        <div class="modal-card">
+            <h3 class="modal-title">Cấu hình LLM</h3>
+            
+            <div style="margin-bottom: 1.5rem;">
+                <label style="display: block; font-size: 0.85rem; color: var(--color-text-secondary); margin-bottom: 0.5rem;">Loại LLM</label>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button id="llm-ollama-btn" class="modal-btn modal-btn-secondary" style="flex: 1;">Ollama (Mặc định)</button>
+                    <button id="llm-gemini-btn" class="modal-btn modal-btn-secondary" style="flex: 1;">Google Gemini</button>
+                </div>
+            </div>
+
+            <div id="gemini-config" style="display: none;">
+                <label style="display: block; font-size: 0.85rem; color: var(--color-text-secondary); margin-bottom: 0.5rem;">Google API Key</label>
+                <input type="password" id="gemini-key-input" class="modal-input" placeholder="Nhập API Key của bạn...">
+                <p style="font-size: 0.75rem; color: var(--color-text-muted); margin-top: 0.5rem;">
+                    API Key sẽ được lưu cục bộ trên trình duyệt của bạn.
+                </p>
+            </div>
+
+            <div class="modal-actions">
+                <button id="settings-cancel-btn" class="modal-btn modal-btn-secondary">Hủy</button>
+                <button id="settings-save-btn" class="modal-btn modal-btn-primary">Lưu cấu hình</button>
             </div>
         </div>
     </div>
@@ -777,9 +811,21 @@ Ví dụ: Tóm tắt tác phẩm Chí Phèo của Nam Cao, bao gồm các nhân 
             // Save request to localStorage and redirect to loading page
             localStorage.setItem('mindmap_request', JSON.stringify({
                 type: 'text',
-                text: text
+                text: text,
+                llm_config: getLLMConfig()
             }));
             window.location.href = '/static/loading.html';
+        }
+
+        // LLM Configuration
+        function getLLMConfig() {
+            const llmType = localStorage.getItem('llm_type') || 'ollama';
+            const apiKey = localStorage.getItem('gemini_api_key');
+            
+            return {
+                llm_type: llmType,
+                api_key: apiKey
+            };
         }
 
         // Generate mindmap from file - redirect to loading page
@@ -800,7 +846,8 @@ Ví dụ: Tóm tắt tác phẩm Chí Phèo của Nam Cao, bao gồm các nhân 
                 localStorage.setItem('mindmap_request', JSON.stringify({
                     type: 'file',
                     fileData: fileData,
-                    fileName: selectedFile.name
+                    fileName: selectedFile.name,
+                    llm_config: getLLMConfig()
                 }));
                 window.location.href = '/static/loading.html';
             } catch (error) {
@@ -830,7 +877,8 @@ Ví dụ: Tóm tắt tác phẩm Chí Phèo của Nam Cao, bao gồm các nhân 
             // Save request to localStorage and redirect to loading page
             localStorage.setItem('mindmap_request', JSON.stringify({
                 type: 'url',
-                url: url
+                url: url,
+                llm_config: getLLMConfig()
             }));
             window.location.href = '/static/loading.html';
         }
@@ -873,6 +921,61 @@ Ví dụ: Tóm tắt tác phẩm Chí Phèo của Nam Cao, bao gồm các nhân 
         // Close modal on overlay click
         urlModal.addEventListener('click', (e) => {
             if (e.target === urlModal) hideUrlModal();
+        });
+
+        // Settings modal events
+        const settingsBtn = document.getElementById('settings-btn');
+        const settingsModal = document.getElementById('settings-modal');
+        const geminiConfig = document.getElementById('gemini-config');
+        const llmOllamaBtn = document.getElementById('llm-ollama-btn');
+        const llmGeminiBtn = document.getElementById('llm-gemini-btn');
+        const geminiKeyInput = document.getElementById('gemini-key-input');
+        const settingsSaveBtn = document.getElementById('settings-save-btn');
+        const settingsCancelBtn = document.getElementById('settings-cancel-btn');
+
+        let currentLlmType = localStorage.getItem('llm_type') || 'ollama';
+
+        function updateSettingsUI() {
+            llmOllamaBtn.classList.toggle('modal-btn-primary', currentLlmType === 'ollama');
+            llmOllamaBtn.classList.toggle('modal-btn-secondary', currentLlmType !== 'ollama');
+            llmGeminiBtn.classList.toggle('modal-btn-primary', currentLlmType === 'gemini');
+            llmGeminiBtn.classList.toggle('modal-btn-secondary', currentLlmType !== 'gemini');
+            geminiConfig.style.display = currentLlmType === 'gemini' ? 'block' : 'none';
+        }
+
+        settingsBtn.addEventListener('click', () => {
+            currentLlmType = localStorage.getItem('llm_type') || 'ollama';
+            geminiKeyInput.value = localStorage.getItem('gemini_api_key') || '';
+            updateSettingsUI();
+            settingsModal.classList.add('visible');
+        });
+
+        llmOllamaBtn.addEventListener('click', () => {
+            currentLlmType = 'ollama';
+            updateSettingsUI();
+        });
+
+        llmGeminiBtn.addEventListener('click', () => {
+            currentLlmType = 'gemini';
+            updateSettingsUI();
+        });
+
+        settingsSaveBtn.addEventListener('click', () => {
+            localStorage.setItem('llm_type', currentLlmType);
+            if (currentLlmType === 'gemini') {
+                localStorage.setItem('gemini_api_key', geminiKeyInput.value.trim());
+            }
+            settingsModal.classList.remove('visible');
+            showStatus('Đã lưu cấu hình LLM!');
+            setTimeout(hideStatus, 2000);
+        });
+
+        settingsCancelBtn.addEventListener('click', () => {
+            settingsModal.classList.remove('visible');
+        });
+
+        settingsModal.addEventListener('click', (e) => {
+            if (e.target === settingsModal) settingsModal.classList.remove('visible');
         });
 
         // Keyboard shortcut: Ctrl+Enter to generate

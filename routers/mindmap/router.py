@@ -1,7 +1,7 @@
 from fastapi import APIRouter, UploadFile
 from fastapi.responses import StreamingResponse
 
-from routers.mindmap.dto import MindmapRequest
+from routers.mindmap.dto import MindmapRequest, LLMConfig, LLMType
 from routers.mindmap.service import (
     generate_mindmap_from_text, generate_mindmap_from_file, generate_mindmap_from_web_url,
     extract_text_from_pdf
@@ -30,7 +30,7 @@ async def generate_mindmap_text(request: MindmapRequest):
     ```
     """
     return StreamingResponse(
-        generate_mindmap_from_text(request.text),
+        generate_mindmap_from_text(request.text, request.llm_config),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
@@ -41,13 +41,19 @@ async def generate_mindmap_text(request: MindmapRequest):
 
 
 @router.post("/file/generate/stream")
-async def generate_mindmap_file(file: UploadFile):
+async def generate_mindmap_file(
+    file: UploadFile,
+    llm_type: LLMType = LLMType.OLLAMA,
+    api_key: str | None = None
+):
     # Process file BEFORE streaming to handle errors properly
     contents = await file.read()
     text = extract_text_from_pdf(contents)
     
+    llm_config = LLMConfig(llm_type=llm_type, api_key=api_key)
+    
     return StreamingResponse(
-        generate_mindmap_from_file(text, file.filename or "file.pdf"),
+        generate_mindmap_from_file(text, file.filename or "file.pdf", llm_config),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
@@ -58,9 +64,14 @@ async def generate_mindmap_file(file: UploadFile):
 
 
 @router.post("/web/generate/stream")
-async def generate_mindmap_web(site_url: str):
+async def generate_mindmap_web(
+    site_url: str,
+    llm_type: LLMType = LLMType.OLLAMA,
+    api_key: str | None = None
+):
+    llm_config = LLMConfig(llm_type=llm_type, api_key=api_key)
     return StreamingResponse(
-        generate_mindmap_from_web_url(site_url),
+        generate_mindmap_from_web_url(site_url, llm_config),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
