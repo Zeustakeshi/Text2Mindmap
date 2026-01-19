@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MindMap App</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <!-- Babel for In-browser JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        body { margin: 0; padding: 0; overflow: hidden; background-color: #f8fafc; }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        // --- React Hooks ---
+        const { useState, useMemo, useEffect } = React;
+
+        // --- Icon Components (Lucide React Replacements) ---
+        const Icons = {
+            Settings: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>,
+            ZoomIn: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>,
+            ZoomOut: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg>,
+            Move: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="5 9 2 12 5 15"/><polyline points="9 5 12 2 15 5"/><polyline points="15 19 12 22 9 19"/><polyline points="19 9 22 12 19 15"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="12" y1="2" x2="12" y2="22"/></svg>,
+            RefreshCw: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>,
+            ChevronRight: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>,
+            Palette: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12.5" r=".5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>,
+            Layout: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>,
+            Minus: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>,
+            Plus: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
+            FileText: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>,
+            AlertCircle: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>,
+            Home: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,
+            PlusCircle: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        };
+
+        const { Settings, ZoomIn, ZoomOut, Move, RefreshCw, ChevronRight, Palette, Layout, Minus, Plus, FileText, AlertCircle, Home, PlusCircle } = Icons;
+
+        // --- Cấu hình hằng số cho Layout ---
+        const NODE_WIDTH = 180;
+        const NODE_HEIGHT_BASE = 50;
+        const LEVEL_GAP = 250;
+        const SIBLING_GAP = 80;
+
+        // --- Dữ liệu mẫu dạng CTM ---
+        const INITIAL_CTM_DATA = `# MindMap: Chí Phèo
+Chí Phèo: Lời chửi và nỗi khổ|id:1
+>Bối cảnh lời chửi
+>>Uống rượu say|icon:wine
+>>Bắt đầu chửi
+>Đối tượng bị chửi
+>>Chửi Trời
+>>Chửi Đời
+>>Chửi làng Vũ Đại
+>>Chửi người không chửi lại
+>>Chửi đứa đẻ ra Chí Phèo
+>Cảm xúc và tâm trạng
+>>Tức giận|color:red
+>>Khổ sở
+>>Tuyệt vọng
+>Ý nghĩa lời chửi
+>>Sự cô đơn
+>>Sự bế tắc
+>>Nỗi đau của kiếp người
+>>Hệ quả của sự tha hóa`;
+
+        // --- CTM PARSER (Bộ giải mã) ---
+        const parseCTM = (text) => {
+            const lines = text.split(/\r?\n/);
+            const stack = []; // Lưu trữ node cha gần nhất ở mỗi cấp độ
+            let root = null;
+            let firstNodeFound = false;
+
+            // Helper: Unescape string (vd: \| -> |, \n -> newline)
+            const unescape = (str) => {
+                return str.replace(/\\([|:,>\\n\t])/g, (match, char) => {
+                    if (char === 'n') return '\n';
+                    if (char === 't') return '\t';
+                    return char;
+                });
+            };
+
+            // Helper: Parse attributes (vd: |id:1,tags:[a,b])
+            const parseAttributes = (attrString) => {
+                const attrs = {};
+                let currentKey = "";
+                let currentValue = "";
+                let isParsingKey = true;
+                let isParsingArray = false;
+                
+                // Scan thủ công để xử lý dấu phẩy và hai chấm chính xác
+                for (let i = 0; i < attrString.length; i++) {
+                    const char = attrString[i];
+                    const prevChar = i > 0 ? attrString[i-1] : null;
+                    const isEscaped = prevChar === '\\';
+
+                    if (char === ':' && !isEscaped && isParsingKey) {
+                        isParsingKey = false;
+                        continue;
+                    }
+
+                    if (char === ',' && !isEscaped && !isParsingArray) {
+                        // Kết thúc cặp key-value
+                        if (currentKey) {
+                            attrs[currentKey.trim()] = detectType(unescape(currentValue));
+                        }
+                        currentKey = "";
+                        currentValue = "";
+                        isParsingKey = true;
+                        continue;
+                    }
+                    
+                    if (char === '[' && !isEscaped) isParsingArray = true;
+                    if (char === ']' && !isEscaped) isParsingArray = false;
+
+                    if (isParsingKey) currentKey += char;
+                    else currentValue += char;
+                }
+                // Add cặp cuối cùng
+                if (currentKey) {
+                    attrs[currentKey.trim()] = detectType(unescape(currentValue));
+                }
+                return attrs;
+            };
+
+            // Helper: Tự động phát hiện kiểu dữ liệu
+            const detectType = (valStr) => {
+                if (valStr === '1') return true;
+                if (valStr === '0') return false;
+                if (valStr === 'null') return null;
+                // Regex check number
+                if (/^-?\d+(\.\d+)?$/.test(valStr)) return parseFloat(valStr);
+                // Check Array [a,b,c]
+                if (valStr.startsWith('[') && valStr.endsWith(']')) {
+                    const content = valStr.slice(1, -1);
+                    if (!content.trim()) return [];
+                    return content.split(/(?<!\\),/).map(unescape);
+                }
+                return valStr;
+            };
+
+            lines.forEach((line, lineIdx) => {
+                const trimmedLine = line.trim();
+                if (!trimmedLine || trimmedLine.startsWith('#')) return; // Bỏ qua comment và dòng trống
+
+                // 1. Đếm thụt đầu dòng (Indentation)
+                let level = 0;
+                let ptr = 0;
+                while (ptr < line.length && line[ptr] === '>') {
+                    level++;
+                    ptr++;
+                }
+
+                const content = line.substring(ptr);
+
+                // 2. Tách Label và Attributes
+                // Tìm ký tự | đầu tiên không bị escape
+                let barIndex = -1;
+                for (let i = 0; i < content.length; i++) {
+                    if (content[i] === '|' && (i === 0 || content[i-1] !== '\\')) {
+                        barIndex = i;
+                        break;
+                    }
+                }
+
+                let labelRaw = barIndex !== -1 ? content.substring(0, barIndex) : content;
+                let attrRaw = barIndex !== -1 ? content.substring(barIndex + 1) : "";
+
+                const label = unescape(labelRaw.trim()); // Trim label để đẹp hơn
+                if (!label && level > 0) return; // Bỏ qua node không có label (trừ khi là root nếu cần xử lý đặc biệt)
+
+                const attributes = attrRaw ? parseAttributes(attrRaw) : {};
+
+                const node = {
+                    label,
+                    ...attributes, // Trộn attributes vào node
+                    children: []
+                };
+
+                // 3. Xây dựng cây
+                if (level === 0) {
+                    // Root node (lấy node cấp 0 đầu tiên làm root chính)
+                    if (!firstNodeFound) {
+                        root = node;
+                        stack[0] = node;
+                        firstNodeFound = true;
+                    } else {
+                        // Nếu có nhiều root, bỏ qua cho đơn giản
+                    }
+                } else {
+                    // Validate indentation continuity
+                    const parent = stack[level - 1];
+                    if (!parent) {
+                        throw new Error(`Lỗi tại dòng ${lineIdx + 1}: Thụt dòng không hợp lệ (Level ${level} nhưng không có cha ở Level ${level-1}). Cấu trúc phải là liên tục (0 > 1 > 2).`);
+                    }
+                    parent.children.push(node);
+                    stack[level] = node;
+                }
+            });
+
+            if (!root) throw new Error("Không tìm thấy Root Node (Node cấp 0 không có dấu '>').");
+            return root;
+        };
+
+
+        // --- HỆ THỐNG THEME (GIAO DIỆN) ---
+        const THEMES = {
+        default: {
+            id: 'default',
+            name: 'Sống động',
+            background: 'bg-slate-50',
+            dotColor: 'border-white',
+            nodes: [
+            'bg-blue-600 border-blue-800 text-white shadow-blue-200',
+            'bg-emerald-500 border-emerald-700 text-white shadow-emerald-200',
+            'bg-amber-400 border-amber-600 text-slate-900 shadow-amber-200',
+            'bg-rose-400 border-rose-600 text-white shadow-rose-200',
+            'bg-purple-400 border-purple-600 text-white shadow-purple-200'
+            ],
+            lines: ['#2563eb', '#10b981', '#fbbf24', '#fb7185', '#c084fc']
+        },
+        pastel: {
+            id: 'pastel',
+            name: 'Pastel Dịu',
+            background: 'bg-[#fdfbf7]',
+            dotColor: 'border-stone-200',
+            nodes: [
+            'bg-blue-100 border-blue-200 text-blue-800 shadow-sm',
+            'bg-green-100 border-green-200 text-green-800 shadow-sm',
+            'bg-orange-100 border-orange-200 text-orange-800 shadow-sm',
+            'bg-pink-100 border-pink-200 text-pink-800 shadow-sm',
+            'bg-purple-100 border-purple-200 text-purple-800 shadow-sm'
+            ],
+            lines: ['#93c5fd', '#86efac', '#fdba74', '#f9a8d4', '#d8b4fe']
+        },
+        dark: {
+            id: 'dark',
+            name: 'Dark Neon',
+            background: 'bg-slate-900',
+            dotColor: 'border-slate-700',
+            nodes: [
+            'bg-slate-800 border-blue-500 text-blue-300 shadow-[0_0_15px_rgba(59,130,246,0.4)]',
+            'bg-slate-800 border-emerald-500 text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.4)]',
+            'bg-slate-800 border-amber-500 text-amber-300 shadow-[0_0_15px_rgba(245,158,11,0.4)]',
+            'bg-slate-800 border-rose-500 text-rose-300 shadow-[0_0_15px_rgba(244,63,94,0.4)]',
+            'bg-slate-800 border-purple-500 text-purple-300 shadow-[0_0_15px_rgba(168,85,247,0.4)]'
+            ],
+            lines: ['#3b82f6', '#10b981', '#f59e0b', '#f43f5e', '#a855f7']
+        },
+        minimal: {
+            id: 'minimal',
+            name: 'Tối Giản',
+            background: 'bg-white',
+            dotColor: 'border-gray-800',
+            nodes: [
+            'bg-white border-2 border-slate-900 text-slate-900 font-bold shadow-[4px_4px_0px_rgba(0,0,0,1)]',
+            'bg-white border border-slate-700 text-slate-700 shadow-[2px_2px_0px_rgba(0,0,0,0.2)]',
+            'bg-white border border-slate-500 text-slate-600',
+            'bg-white border border-slate-400 text-slate-500',
+            'bg-white border border-slate-300 text-slate-400'
+            ],
+            lines: ['#0f172a', '#334155', '#64748b', '#94a3b8', '#cbd5e1']
+        },
+        ocean: {
+            id: 'ocean',
+            name: 'Đại Dương',
+            background: 'bg-cyan-50',
+            dotColor: 'border-cyan-200',
+            nodes: [
+            'bg-cyan-800 border-cyan-900 text-cyan-50 shadow-lg',
+            'bg-sky-600 border-sky-700 text-sky-50 shadow-md',
+            'bg-blue-500 border-blue-600 text-blue-50 shadow-sm',
+            'bg-indigo-400 border-indigo-500 text-indigo-50',
+            'bg-violet-300 border-violet-400 text-violet-900'
+            ],
+            lines: ['#155e75', '#0284c7', '#3b82f6', '#6366f1', '#8b5cf6']
+        }
+        };
+
+        function MindMapApp() {
+        const [ctmInput, setCtmInput] = useState(INITIAL_CTM_DATA);
+        const [parsedData, setParsedData] = useState(null);
+        const [error, setError] = useState(null);
+        const [scale, setScale] = useState(1);
+        const [offset, setOffset] = useState({ x: 50, y: 50 });
+        const [isDragging, setIsDragging] = useState(false);
+        const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+        const [showEditor, setShowEditor] = useState(false);
+        const [collapsedNodes, setCollapsedNodes] = useState(new Set());
+        
+        // State cho Theme
+        const [currentThemeId, setCurrentThemeId] = useState('default');
+        const currentTheme = THEMES[currentThemeId];
+
+        // Initialize data on load - check localStorage first
+        useEffect(() => {
+            // Check if there's CTM data from homepage
+            const storedCtm = localStorage.getItem('mindmap_ctm');
+            const initialData = storedCtm || ctmInput;
+            
+            if (storedCtm) {
+                setCtmInput(storedCtm);
+                // Clear localStorage after reading
+                localStorage.removeItem('mindmap_ctm');
+            }
+            
+            try {
+                const data = parseCTM(initialData);
+                setParsedData(data);
+                setError(null);
+            } catch (e) {
+                setError(e.message);
+            }
+        }, []);
+
+        const getNodeClass = (depth) => {
+            return currentTheme.nodes[depth] || currentTheme.nodes[currentTheme.nodes.length - 1];
+        };
+
+        const getLineColor = (depth) => {
+            return currentTheme.lines[depth] || currentTheme.lines[currentTheme.lines.length - 1];
+        };
+
+        // --- Xử lý thay đổi Input CTM ---
+        const handleCtmChange = (e) => {
+            const value = e.target.value;
+            setCtmInput(value);
+            try {
+            const data = parseCTM(value);
+            if (data) {
+                setParsedData(data);
+                setError(null);
+            }
+            } catch (err) {
+            setError(err.message);
+            }
+        };
+
+        const handleReset = () => {
+            setCtmInput(INITIAL_CTM_DATA);
+            setCollapsedNodes(new Set());
+            try {
+                setParsedData(parseCTM(INITIAL_CTM_DATA));
+                setError(null);
+            } catch (e) {
+                setError(e.message);
+            }
+        };
+
+        // --- Toggle Collapse ---
+        const toggleNode = (nodeId) => {
+            setCollapsedNodes(prev => {
+            const next = new Set(prev);
+            if (next.has(nodeId)) {
+                next.delete(nodeId);
+            } else {
+                next.add(nodeId);
+            }
+            return next;
+            });
+        };
+
+        // --- Thuật toán Layout cây ---
+        const layoutTree = useMemo(() => {
+            if (!parsedData) return { nodes: [], links: [], width: 0, height: 0 };
+
+            let leafIndex = 0;
+            const nodes = [];
+            const links = [];
+
+            const processNode = (node, depth, path = "0") => {
+            const isCollapsed = collapsedNodes.has(path);
+            const hasChildren = node.children && Array.isArray(node.children) && node.children.length > 0;
+            
+            const processedNode = {
+                id: path,
+                label: node.label || "No Label",
+                depth: depth,
+                x: depth * LEVEL_GAP,
+                y: 0,
+                raw: node,
+                isCollapsed: isCollapsed,
+                hasChildren: hasChildren,
+                visibleChildren: []
+            };
+
+            if (hasChildren && !isCollapsed) {
+                node.children.forEach((child, index) => {
+                const childPath = `${path}-${index}`;
+                const childNode = processNode(child, depth + 1, childPath);
+                processedNode.visibleChildren.push(childNode);
+                });
+            }
+            return processedNode;
+            };
+
+            const root = processNode(parsedData, 0);
+
+            const calculateCoordinates = (node) => {
+            if (node.visibleChildren.length === 0) {
+                node.y = leafIndex * SIBLING_GAP;
+                leafIndex++;
+            } else {
+                node.visibleChildren.forEach(child => calculateCoordinates(child));
+                const firstChildY = node.visibleChildren[0].y;
+                const lastChildY = node.visibleChildren[node.visibleChildren.length - 1].y;
+                node.y = (firstChildY + lastChildY) / 2;
+            }
+            nodes.push(node);
+            node.visibleChildren.forEach(child => {
+                links.push({ source: node, target: child });
+            });
+            };
+
+            calculateCoordinates(root);
+
+            const maxY = Math.max(...nodes.map(n => n.y));
+            const maxX = Math.max(...nodes.map(n => n.x));
+
+            return { nodes, links, width: maxX + NODE_WIDTH + 100, height: maxY + 100 };
+        }, [parsedData, collapsedNodes]);
+
+
+        // --- Xử lý Zoom / Pan ---
+        const handleWheel = (e) => {
+            if (e.ctrlKey) {
+                e.preventDefault();
+                const delta = e.deltaY > 0 ? 0.9 : 1.1;
+                setScale(s => Math.min(Math.max(0.1, s * delta), 3));
+            }
+        };
+
+        const handleMouseDown = (e) => {
+            if(e.target.closest('.mindmap-toggle')) return;
+            if(e.target.closest('.mindmap-node')) return;
+            setIsDragging(true);
+            setDragStart({ x: e.clientX - offset.x, y: e.clientY - offset.y });
+        };
+
+        const handleMouseMove = (e) => {
+            if (isDragging) {
+            setOffset({
+                x: e.clientX - dragStart.x,
+                y: e.clientY - dragStart.y
+            });
+            }
+        };
+
+        const handleMouseUp = () => {
+            setIsDragging(false);
+        };
+        
+        return (
+            <div className={`flex h-screen w-full overflow-hidden font-sans transition-colors duration-500 ${currentTheme.background} ${currentThemeId === 'dark' ? 'text-slate-100' : 'text-slate-800'}`}>
+            
+            {/* Sidebar Editor & Settings */}
+            <div 
+                className={`fixed inset-y-0 left-0 z-20 w-96 bg-white shadow-2xl transform transition-transform duration-300 ease-in-out border-r border-slate-200 flex flex-col ${showEditor ? 'translate-x-0' : '-translate-x-full'}`}
+            >
+                <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+                <h2 className="font-bold text-lg text-slate-700 flex items-center gap-2">
+                    <Settings size={18} /> Cài đặt & Dữ liệu
+                </h2>
+                <button onClick={() => setShowEditor(false)} className="p-1 hover:bg-slate-200 rounded text-slate-600">
+                    <ChevronRight size={20} />
+                </button>
+                </div>
+                
+                <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-6">
+                    
+                    {/* Theme Selector */}
+                    <div className="space-y-3">
+                        <h3 className="text-sm font-semibold text-slate-600 flex items-center gap-2">
+                            <Palette size={16} /> Chọn Giao diện
+                        </h3>
+                        <div className="grid grid-cols-2 gap-2">
+                            {Object.values(THEMES).map(theme => (
+                                <button
+                                    key={theme.id}
+                                    onClick={() => setCurrentThemeId(theme.id)}
+                                    className={`p-2 rounded-lg border text-left text-sm transition-all flex items-center gap-2 group
+                                        ${currentThemeId === theme.id 
+                                            ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-500' 
+                                            : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                                        }`}
+                                >
+                                    <div className={`w-4 h-4 rounded-full border shadow-sm ${theme.id === 'minimal' ? 'bg-white border-slate-900' : ''}`}
+                                        style={{ backgroundColor: theme.id !== 'minimal' ? theme.lines[0] : '' }}
+                                    ></div>
+                                    <span className="text-slate-700 font-medium">{theme.name}</span>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <hr className="border-slate-100" />
+
+                    {/* CTM Input */}
+                    <div className="space-y-2 flex-1 flex flex-col">
+                        <h3 className="text-sm font-semibold text-slate-600 flex items-center gap-2">
+                            <FileText size={16} /> Dữ liệu CTM
+                        </h3>
+                        <div className="bg-slate-100 p-2 rounded text-xs text-slate-500 font-mono mb-1 leading-relaxed">
+                            Format: <code>&lt;indent&gt;Label|key:value</code><br/>
+                            Example:<br/>
+                            Root<br/>
+                            &gt;Child 1|id:1<br/>
+                            &gt;&gt;Grandchild
+                        </div>
+                        <textarea 
+                            className={`w-full flex-1 min-h-[300px] p-3 font-mono text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none text-slate-800 whitespace-pre ${error ? 'border-red-500 bg-red-50' : 'border-slate-300'}`}
+                            value={ctmInput}
+                            onChange={handleCtmChange}
+                            spellCheck="false"
+                            placeholder="Nhập nội dung theo định dạng CTM..."
+                        />
+                        {error && (
+                            <div className="text-red-600 text-xs p-2 bg-red-50 rounded border border-red-200 flex items-start gap-1">
+                                <AlertCircle size={14} className="mt-0.5 shrink-0" />
+                                <span>{error}</span>
+                            </div>
+                        )}
+                        <button 
+                            onClick={handleReset}
+                            className="flex items-center justify-center gap-2 py-2 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-sm font-medium transition-colors"
+                        >
+                            <RefreshCw size={14} /> Khôi phục mẫu gốc
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {/* Main Canvas Area */}
+            <div 
+                className="flex-1 relative cursor-grab active:cursor-grabbing overflow-hidden"
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onMouseLeave={handleMouseUp}
+                onWheel={handleWheel}
+            >
+                {/* Toggle Editor Button */}
+                {!showEditor && (
+                    <button 
+                        onClick={() => setShowEditor(true)}
+                        className="absolute top-4 left-4 z-10 bg-white/90 backdrop-blur-sm p-2 rounded-lg shadow-md border border-slate-200 hover:bg-slate-50 transition-colors group"
+                        title="Mở cài đặt"
+                    >
+                        <Settings size={20} className="text-slate-600 group-hover:rotate-45 transition-transform duration-300" />
+                    </button>
+                )}
+
+                {/* Toolbar */}
+                <div className="absolute top-4 right-4 z-10 flex gap-2 bg-white/90 backdrop-blur-sm p-2 rounded-lg shadow-md border border-slate-200 text-slate-700">
+                    <button onClick={() => window.location.href = '/'} className="p-2 hover:bg-indigo-100 rounded flex items-center gap-1.5 text-indigo-600 font-medium text-sm" title="Tạo mindmap mới">
+                        <PlusCircle size={18}/>
+                        <span className="hidden sm:inline">Tạo mới</span>
+                    </button>
+                    <div className="w-px bg-slate-200 mx-1"></div>
+                    <button onClick={() => setScale(s => s - 0.1)} className="p-2 hover:bg-slate-100 rounded" title="Thu nhỏ"><ZoomOut size={20}/></button>
+                    <span className="p-2 min-w-[3rem] text-center font-mono text-sm pt-2.5 select-none">{Math.round(scale * 100)}%</span>
+                    <button onClick={() => setScale(s => s + 0.1)} className="p-2 hover:bg-slate-100 rounded" title="Phóng to"><ZoomIn size={20}/></button>
+                    <div className="w-px bg-slate-200 mx-1"></div>
+                    <button onClick={() => { setOffset({x: 50, y: 50}); setScale(1); }} className="p-2 hover:bg-slate-100 rounded" title="Reset vị trí"><Move size={20}/></button>
+                </div>
+
+                {/* The Mind Map */}
+                <div 
+                    style={{ 
+                        transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
+                        transformOrigin: '0 0',
+                        transition: isDragging ? 'none' : 'transform 0.2s ease-out'
+                    }}
+                    className="absolute top-0 left-0 w-full h-full"
+                >
+                    <svg 
+                        width={layoutTree.width} 
+                        height={layoutTree.height} 
+                        className="overflow-visible pointer-events-none"
+                    >
+                        {layoutTree.links.map((link, i) => {
+                            const startX = link.source.x + NODE_WIDTH;
+                            const startY = link.source.y + NODE_HEIGHT_BASE / 2;
+                            const endX = link.target.x;
+                            const endY = link.target.y + NODE_HEIGHT_BASE / 2;
+
+                            const cp1x = startX + (endX - startX) / 2;
+                            const cp1y = startY;
+                            const cp2x = startX + (endX - startX) / 2;
+                            const cp2y = endY;
+                            
+                            const pathData = `M ${startX} ${startY} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${endX} ${endY}`;
+
+                            return (
+                                <g key={`${link.source.id}-${link.target.id}`}>
+                                    <path 
+                                        d={pathData} 
+                                        fill="none" 
+                                        stroke={getLineColor(link.target.depth)} 
+                                        strokeWidth="2"
+                                        strokeOpacity={currentThemeId === 'dark' ? "0.4" : "0.6"}
+                                        className="transition-colors duration-500"
+                                    />
+                                </g>
+                            );
+                        })}
+                    </svg>
+
+                    {layoutTree.nodes.map((node) => (
+                        <div
+                            key={node.id}
+                            className={`mindmap-node absolute flex items-center justify-center p-3 rounded-xl transition-all duration-300 hover:scale-105 hover:z-20 cursor-default select-none ${getNodeClass(node.depth)}`}
+                            style={{
+                                left: node.x,
+                                top: node.y,
+                                width: NODE_WIDTH,
+                                minHeight: NODE_HEIGHT_BASE,
+                                zIndex: 10 + node.depth
+                            }}
+                        >
+                            <div className="text-center w-full">
+                                <span className="font-semibold text-sm leading-tight block break-words">
+                                    {node.label}
+                                </span>
+                            </div>
+                            
+                            {node.hasChildren && (
+                                <button
+                                    className={`mindmap-toggle absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full flex items-center justify-center border transition-transform hover:scale-110 cursor-pointer shadow-sm z-30 ${currentThemeId === 'dark' ? 'bg-slate-800 border-slate-600 hover:bg-slate-700' : 'bg-white border-slate-300 hover:bg-slate-50'}`}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        toggleNode(node.id);
+                                    }}
+                                >
+                                    {node.isCollapsed ? (
+                                        <Plus size={12} className={currentThemeId === 'dark' ? 'text-white' : 'text-slate-600'} />
+                                    ) : (
+                                        <Minus size={12} className={currentThemeId === 'dark' ? 'text-white' : 'text-slate-600'} />
+                                    )}
+                                </button>
+                            )}
+
+                            {node.depth > 0 && (
+                                <div 
+                                    className={`absolute -left-1.5 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 ${currentTheme.dotColor} ${getNodeClass(node.depth).split(' ')[0]}`}
+                                />
+                            )}
+                        </div>
+                    ))}
+                </div>
+                
+                <div className={`absolute bottom-4 left-4 text-xs select-none pointer-events-none transition-colors ${currentThemeId === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>
+                    Bấm +/- để đóng mở nhánh • Kéo thả để di chuyển
+                </div>
+
+            </div>
+            </div>
+        );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<MindMapApp />);
+    </script>
+</body>
+</html>

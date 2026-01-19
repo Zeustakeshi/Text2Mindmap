@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="Text2Mindmap - Đang xử lý...">
+    <title>Đang tạo Mindmap... - Text2Mindmap</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="loading_style.css">
+</head>
+<body>
+    <!-- Canvas for Space Animation -->
+    <canvas id="space-canvas"></canvas>
+
+    <!-- Particle Layer -->
+    <div id="particles"></div>
+
+    <!-- Main Content -->
+    <div class="main-container">
+        <!-- Rocket Scene -->
+        <div class="rocket-scene" id="rocket-scene">
+            <!-- Rocket Container -->
+            <div class="rocket-container" id="rocket-container">
+                <!-- Rocket Body -->
+                <div class="rocket">
+                    <!-- Rocket Nose -->
+                    <div class="rocket-nose"></div>
+                    <!-- Rocket Body -->
+                    <div class="rocket-body">
+                        <div class="window">
+                            <div class="window-reflection"></div>
+                        </div>
+                        <div class="rocket-detail rocket-detail-1"></div>
+                        <div class="rocket-detail rocket-detail-2"></div>
+                    </div>
+                    <!-- Fins -->
+                    <div class="fin fin-left"></div>
+                    <div class="fin fin-right"></div>
+                    <div class="fin fin-center"></div>
+                    <!-- Exhaust/Flames -->
+                    <div class="exhaust">
+                        <div class="flame flame-1"></div>
+                        <div class="flame flame-2"></div>
+                        <div class="flame flame-3"></div>
+                    </div>
+                </div>
+                <!-- Smoke Particles -->
+                <div class="smoke-container" id="smoke-container"></div>
+            </div>
+        </div>
+
+        <!-- Mission Control Panel -->
+        <div class="mission-panel" id="mission-panel">
+            <!-- Mission Status -->
+            <div class="mission-header">
+                <div class="mission-logo">
+                    <span class="logo-icon">🚀</span>
+                    <span class="logo-text">MISSION CONTROL</span>
+                </div>
+                <div class="mission-status" id="mission-status">
+                    <span class="status-dot"></span>
+                    <span class="status-label">LIVE</span>
+                </div>
+            </div>
+
+            <!-- Current Phase -->
+            <div class="current-phase">
+                <h1 class="phase-title" id="phase-title">KHỞI ĐỘNG HỆ THỐNG</h1>
+                <p class="phase-subtitle" id="phase-subtitle">Chuẩn bị kết nối đến trung tâm dữ liệu...</p>
+            </div>
+
+            <!-- Progress Track (Journey Path) -->
+            <div class="journey-track">
+                <div class="journey-line">
+                    <div class="journey-progress" id="journey-progress"></div>
+                </div>
+                <div class="journey-markers" id="journey-markers">
+                    <!-- Markers will be added dynamically -->
+                </div>
+            </div>
+
+            <!-- Mission Steps -->
+            <div class="mission-steps" id="mission-steps">
+                <!-- Steps will be added dynamically -->
+            </div>
+
+            <!-- Speed Stats -->
+            <div class="stats-row">
+                <div class="stat-item">
+                    <span class="stat-value" id="stat-speed">0</span>
+                    <span class="stat-label">km/s</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value" id="stat-altitude">0</span>
+                    <span class="stat-label">km</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value" id="stat-progress">0</span>
+                    <span class="stat-label">%</span>
+                </div>
+            </div>
+
+            <!-- Hint -->
+            <div class="mission-hint" id="mission-hint">
+                <span class="hint-icon">💡</span>
+                <span class="hint-text">Di chuột vào tên lửa để kích hoạt Turbo Mode!</span>
+            </div>
+        </div>
+
+        <!-- Error State -->
+        <div class="error-panel" id="error-panel">
+            <div class="error-icon-container">
+                <svg class="error-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="15" y1="9" x2="9" y2="15"/>
+                    <line x1="9" y1="9" x2="15" y2="15"/>
+                </svg>
+            </div>
+            <h2 class="error-title">MISSION ABORTED</h2>
+            <p class="error-message" id="error-message">Không thể kết nối đến trung tâm điều khiển</p>
+            <div class="error-actions">
+                <button id="retry-btn" class="btn btn-primary">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="23 4 23 10 17 10"/>
+                        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                    </svg>
+                    TÁI KHỞI ĐỘNG
+                </button>
+                <a href="/static/index.html" class="btn btn-secondary">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="19" y1="12" x2="5" y2="12"/>
+                        <polyline points="12 19 5 12 12 5"/>
+                    </svg>
+                    VỀ TRÁI ĐẤT
+                </a>
+            </div>
+        </div>
+
+        <!-- Success State -->
+        <div class="success-panel" id="success-panel">
+            <div class="success-celebration">
+                <div class="success-star">🌟</div>
+                <div class="success-particles"></div>
+            </div>
+            <h2 class="success-title">MISSION COMPLETE!</h2>
+            <p class="success-message">Đã đến đích thành công. Đang mở bản đồ tư duy...</p>
+        </div>
+    </div>
+
+    <script src="loading.js"></script>
+</body>
+</html>

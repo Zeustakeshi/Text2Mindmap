@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Text2Mindmap - Chuyển đổi văn bản thành mindmap tự động bằng AI">
+    <title>Text2Mindmap - AI Mindmap Generator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* ===== CSS Variables ===== */
+        :root {
+            --color-bg-primary: #0a0a0f;
+            --color-bg-secondary: #12121a;
+            --color-bg-card: rgba(26, 26, 36, 0.8);
+            --color-border: rgba(255, 255, 255, 0.08);
+            --color-border-hover: rgba(255, 255, 255, 0.15);
+            --color-text-primary: #ffffff;
+            --color-text-secondary: #a0a0b0;
+            --color-text-muted: #606070;
+            --color-accent-primary: #6366f1;
+            --color-accent-secondary: #8b5cf6;
+            --color-accent-gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%);
+            --color-success: #22c55e;
+            --color-error: #ef4444;
+            --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-xl: 24px;
+            --transition-fast: 150ms ease;
+            --transition-normal: 250ms ease;
+        }
+
+        /* ===== Reset & Base ===== */
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html, body {
+            height: 100%;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background: var(--color-bg-primary);
+            color: var(--color-text-primary);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            overflow: hidden;
+        }
+
+        /* ===== Animated Background ===== */
+        .bg-container {
+            position: fixed;
+            inset: 0;
+            overflow: hidden;
+            z-index: 0;
+        }
+
+        .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.5;
+            animation: float 20s ease-in-out infinite;
+        }
+
+        .orb-1 {
+            width: 500px;
+            height: 500px;
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            top: -150px;
+            left: -100px;
+            animation-delay: 0s;
+        }
+
+        .orb-2 {
+            width: 400px;
+            height: 400px;
+            background: linear-gradient(135deg, #a855f7 0%, #ec4899 100%);
+            bottom: -100px;
+            right: -100px;
+            animation-delay: -5s;
+        }
+
+        .orb-3 {
+            width: 300px;
+            height: 300px;
+            background: linear-gradient(135deg, #22c55e 0%, #14b8a6 100%);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            animation-delay: -10s;
+            opacity: 0.3;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            25% { transform: translate(30px, -30px) scale(1.05); }
+            50% { transform: translate(-20px, 20px) scale(0.95); }
+            75% { transform: translate(20px, 10px) scale(1.02); }
+        }
+
+        /* ===== App Layout ===== */
+        .app-container {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        /* ===== Header ===== */
+        .header {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 1.5rem 2rem;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo-icon {
+            width: 36px;
+            height: 36px;
+            color: var(--color-accent-primary);
+        }
+
+        .logo-text {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: var(--color-accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* ===== Main Chat Area ===== */
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+            max-width: 800px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .welcome-text {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .welcome-title {
+            font-size: clamp(1.5rem, 4vw, 2.5rem);
+            font-weight: 700;
+            margin-bottom: 0.75rem;
+        }
+
+        .gradient-text {
+            background: var(--color-accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .welcome-subtitle {
+            color: var(--color-text-secondary);
+            font-size: 1.1rem;
+        }
+
+        /* ===== Chat Input Card ===== */
+        .chat-card {
+            width: 100%;
+            background: var(--color-bg-card);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-xl);
+            padding: 1.5rem;
+            box-shadow: 
+                0 4px 24px rgba(0, 0, 0, 0.3),
+                0 0 60px rgba(99, 102, 241, 0.1);
+            transition: box-shadow var(--transition-normal), border-color var(--transition-normal);
+        }
+
+        .chat-card:focus-within {
+            border-color: var(--color-border-hover);
+            box-shadow: 
+                0 4px 24px rgba(0, 0, 0, 0.4),
+                0 0 80px rgba(99, 102, 241, 0.15);
+        }
+
+        .chat-input {
+            width: 100%;
+            background: transparent;
+            border: none;
+            color: var(--color-text-primary);
+            font-family: inherit;
+            font-size: 1rem;
+            resize: none;
+            min-height: 120px;
+            max-height: 300px;
+            outline: none;
+            line-height: 1.6;
+        }
+
+        .chat-input::placeholder {
+            color: var(--color-text-muted);
+        }
+
+        .chat-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--color-border);
+        }
+
+        .char-count {
+            font-size: 0.875rem;
+            color: var(--color-text-muted);
+        }
+
+        .send-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--color-accent-gradient);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: var(--radius-md);
+            font-family: inherit;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform var(--transition-fast), box-shadow var(--transition-fast), opacity var(--transition-fast);
+        }
+
+        .send-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(99, 102, 241, 0.4);
+        }
+
+        .send-btn:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .send-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .send-btn svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        /* ===== Loading State ===== */
+        .send-btn.loading .btn-text {
+            display: none;
+        }
+
+        .send-btn .spinner {
+            display: none;
+        }
+
+        .send-btn.loading .spinner {
+            display: block;
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* ===== Status Message ===== */
+        .status-message {
+            margin-top: 1rem;
+            padding: 0.75rem 1rem;
+            background: rgba(99, 102, 241, 0.1);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            border-radius: var(--radius-md);
+            color: var(--color-text-secondary);
+            font-size: 0.9rem;
+            text-align: center;
+            display: none;
+        }
+
+        .status-message.visible {
+            display: block;
+        }
+
+        .status-message.error {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: rgba(239, 68, 68, 0.2);
+            color: var(--color-error);
+        }
+
+        /* ===== Action Buttons ===== */
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .action-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-md);
+            color: var(--color-text-secondary);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+
+        .action-btn:hover {
+            background: rgba(99, 102, 241, 0.15);
+            border-color: var(--color-accent-primary);
+            color: var(--color-accent-primary);
+        }
+
+        .action-btn.active {
+            background: rgba(99, 102, 241, 0.2);
+            border-color: var(--color-accent-primary);
+            color: var(--color-accent-primary);
+        }
+
+        .action-btn svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        /* ===== Modal ===== */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            opacity: 0;
+            visibility: hidden;
+            transition: all var(--transition-normal);
+        }
+
+        .modal-overlay.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-card {
+            width: 90%;
+            max-width: 500px;
+            background: var(--color-bg-secondary);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-xl);
+            padding: 1.5rem;
+            transform: scale(0.95);
+            transition: transform var(--transition-normal);
+        }
+
+        .modal-overlay.visible .modal-card {
+            transform: scale(1);
+        }
+
+        .modal-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--color-text-primary);
+        }
+
+        .modal-input {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            background: var(--color-bg-card);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-md);
+            color: var(--color-text-primary);
+            font-family: inherit;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color var(--transition-fast);
+        }
+
+        .modal-input:focus {
+            border-color: var(--color-accent-primary);
+        }
+
+        .modal-input::placeholder {
+            color: var(--color-text-muted);
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 1rem;
+            justify-content: flex-end;
+        }
+
+        .modal-btn {
+            padding: 0.75rem 1.25rem;
+            border-radius: var(--radius-md);
+            font-family: inherit;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+
+        .modal-btn-secondary {
+            background: transparent;
+            border: 1px solid var(--color-border);
+            color: var(--color-text-secondary);
+        }
+
+        .modal-btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .modal-btn-primary {
+            background: var(--color-accent-gradient);
+            border: none;
+            color: white;
+        }
+
+        .modal-btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
+        }
+
+        /* ===== File Info ===== */
+        .file-info {
+            display: none;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            background: rgba(99, 102, 241, 0.1);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            border-radius: var(--radius-md);
+            margin-bottom: 1rem;
+        }
+
+        .file-info.visible {
+            display: flex;
+        }
+
+        .file-info-icon {
+            width: 20px;
+            height: 20px;
+            color: var(--color-accent-primary);
+        }
+
+        .file-info-name {
+            flex: 1;
+            font-size: 0.9rem;
+            color: var(--color-text-secondary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .file-info-remove {
+            background: transparent;
+            border: none;
+            color: var(--color-text-muted);
+            cursor: pointer;
+            padding: 0.25rem;
+            display: flex;
+            transition: color var(--transition-fast);
+        }
+
+        .file-info-remove:hover {
+            color: var(--color-error);
+        }
+
+        .file-info-remove svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        /* ===== Hints ===== */
+        .hints {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .hint {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--color-text-muted);
+            font-size: 0.8rem;
+        }
+
+        .hint kbd {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 0.75rem;
+        }
+
+        /* ===== Responsive ===== */
+        @media (max-width: 768px) {
+            .main {
+                padding: 1rem;
+            }
+
+            .chat-card {
+                padding: 1rem;
+            }
+
+            .chat-input {
+                min-height: 100px;
+            }
+
+            .hints {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Animated Background -->
+    <div class="bg-container">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
+
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <svg class="logo-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="12" r="3" fill="currentColor"/>
+                    <circle cx="4" cy="6" r="2" fill="currentColor" opacity="0.7"/>
+                    <circle cx="20" cy="6" r="2" fill="currentColor" opacity="0.7"/>
+                    <circle cx="4" cy="18" r="2" fill="currentColor" opacity="0.7"/>
+                    <circle cx="20" cy="18" r="2" fill="currentColor" opacity="0.7"/>
+                    <line x1="12" y1="12" x2="4" y2="6" stroke="currentColor" stroke-width="1.5" opacity="0.5"/>
+                    <line x1="12" y1="12" x2="20" y2="6" stroke="currentColor" stroke-width="1.5" opacity="0.5"/>
+                    <line x1="12" y1="12" x2="4" y2="18" stroke="currentColor" stroke-width="1.5" opacity="0.5"/>
+                    <line x1="12" y1="12" x2="20" y2="18" stroke="currentColor" stroke-width="1.5" opacity="0.5"/>
+                </svg>
+                <span class="logo-text">Text2Mindmap</span>
+            </div>
+        </header>
+
+        <!-- Main Chat Area -->
+        <main class="main">
+            <div class="welcome-text">
+                <h1 class="welcome-title">
+                    Biến <span class="gradient-text">ý tưởng</span> thành <span class="gradient-text">mindmap</span>
+                </h1>
+                <p class="welcome-subtitle">Nhập văn bản và để AI tạo sơ đồ tư duy cho bạn</p>
+            </div>
+
+            <div class="chat-card">
+                <textarea 
+                    id="text-input" 
+                    class="chat-input" 
+                    placeholder="Nhập nội dung bạn muốn tạo mindmap...
+
+Ví dụ: Tóm tắt tác phẩm Chí Phèo của Nam Cao, bao gồm các nhân vật chính, bối cảnh và ý nghĩa của tác phẩm."
+                    autofocus
+                ></textarea>
+
+                <!-- File Info (shown when file is selected) -->
+                <div id="file-info" class="file-info">
+                    <svg class="file-info-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14 2 14 8 20 8"/>
+                    </svg>
+                    <span id="file-name" class="file-info-name"></span>
+                    <button id="file-remove" class="file-info-remove" title="Xóa file">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"/>
+                            <line x1="6" y1="6" x2="18" y2="18"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="chat-footer">
+                    <div class="action-buttons">
+                        <button id="web-btn" class="action-btn" title="Tạo mindmap từ URL">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"/>
+                                <line x1="2" y1="12" x2="22" y2="12"/>
+                                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                            </svg>
+                        </button>
+                        <button id="file-btn" class="action-btn" title="Tải lên file PDF">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                <polyline points="14 2 14 8 20 8"/>
+                                <line x1="12" y1="18" x2="12" y2="12"/>
+                                <line x1="9" y1="15" x2="12" y2="12"/>
+                                <line x1="15" y1="15" x2="12" y2="12"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <span class="char-count">0 ký tự</span>
+                    <button id="send-btn" class="send-btn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M22 2L11 13"/>
+                            <path d="M22 2L15 22L11 13L2 9L22 2Z"/>
+                        </svg>
+                        <span class="btn-text">Tạo Mindmap</span>
+                        <div class="spinner"></div>
+                    </button>
+                </div>
+
+                <div id="status-message" class="status-message"></div>
+            </div>
+
+            <!-- Hidden file input -->
+            <input type="file" id="file-input" accept=".pdf" hidden>
+
+            <div class="hints">
+                <div class="hint">
+                    <kbd>Ctrl</kbd> + <kbd>Enter</kbd> để gửi
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- URL Modal -->
+    <div id="url-modal" class="modal-overlay">
+        <div class="modal-card">
+            <h3 class="modal-title">Nhập URL trang web</h3>
+            <input type="url" id="url-input" class="modal-input" placeholder="https://example.com/article">
+            <div class="modal-actions">
+                <button id="url-cancel-btn" class="modal-btn modal-btn-secondary">Hủy</button>
+                <button id="url-submit-btn" class="modal-btn modal-btn-primary">Tạo Mindmap</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const textInput = document.getElementById('text-input');
+        const charCount = document.querySelector('.char-count');
+        const sendBtn = document.getElementById('send-btn');
+        const statusMessage = document.getElementById('status-message');
+        const webBtn = document.getElementById('web-btn');
+        const fileBtn = document.getElementById('file-btn');
+        const fileInput = document.getElementById('file-input');
+        const fileInfo = document.getElementById('file-info');
+        const fileName = document.getElementById('file-name');
+        const fileRemove = document.getElementById('file-remove');
+        const urlModal = document.getElementById('url-modal');
+        const urlInput = document.getElementById('url-input');
+        const urlSubmitBtn = document.getElementById('url-submit-btn');
+        const urlCancelBtn = document.getElementById('url-cancel-btn');
+
+        // API Endpoint
+        const API_BASE = '/mindmap';
+
+        // State
+        let selectedFile = null;
+
+        // Update character count
+        function updateCharCount() {
+            const count = textInput.value.length;
+            charCount.textContent = `${count.toLocaleString()} ký tự`;
+        }
+
+        // Show status message
+        function showStatus(message, isError = false) {
+            statusMessage.textContent = message;
+            statusMessage.classList.add('visible');
+            statusMessage.classList.toggle('error', isError);
+        }
+
+        // Hide status message
+        function hideStatus() {
+            statusMessage.classList.remove('visible', 'error');
+        }
+
+        // Set loading state
+        function setLoading(loading) {
+            sendBtn.disabled = loading;
+            sendBtn.classList.toggle('loading', loading);
+            webBtn.disabled = loading;
+            fileBtn.disabled = loading;
+        }
+
+        // Show/hide URL modal
+        function showUrlModal() {
+            urlModal.classList.add('visible');
+            urlInput.focus();
+        }
+
+        function hideUrlModal() {
+            urlModal.classList.remove('visible');
+            urlInput.value = '';
+        }
+
+        // Handle file selection
+        function handleFileSelect(file) {
+            if (!file) return;
+            
+            if (!file.name.toLowerCase().endsWith('.pdf')) {
+                showStatus('Chỉ hỗ trợ file PDF!', true);
+                return;
+            }
+
+            if (file.size > 10 * 1024 * 1024) {
+                showStatus('File quá lớn! Tối đa 10MB.', true);
+                return;
+            }
+
+            selectedFile = file;
+            fileName.textContent = file.name;
+            fileInfo.classList.add('visible');
+            fileBtn.classList.add('active');
+            hideStatus();
+        }
+
+        // Clear selected file
+        function clearFile() {
+            selectedFile = null;
+            fileInput.value = '';
+            fileInfo.classList.remove('visible');
+            fileBtn.classList.remove('active');
+        }
+
+        // Convert file to base64
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => {
+                    // Remove the data:application/pdf;base64, prefix
+                    const base64 = reader.result.split(',')[1];
+                    resolve(base64);
+                };
+                reader.onerror = error => reject(error);
+            });
+        }
+
+        // Generate mindmap from text - redirect to loading page
+        async function generateFromText() {
+            const text = textInput.value.trim();
+            if (!text) {
+                showStatus('Vui lòng nhập văn bản để tạo mindmap!', true);
+                return;
+            }
+
+            // Save request to localStorage and redirect to loading page
+            localStorage.setItem('mindmap_request', JSON.stringify({
+                type: 'text',
+                text: text
+            }));
+            window.location.href = '/static/loading.html';
+        }
+
+        // Generate mindmap from file - redirect to loading page
+        async function generateFromFile() {
+            if (!selectedFile) {
+                showStatus('Vui lòng chọn file PDF!', true);
+                return;
+            }
+
+            setLoading(true);
+            showStatus('Đang chuẩn bị file...');
+
+            try {
+                // Convert file to base64 for storage
+                const fileData = await fileToBase64(selectedFile);
+                
+                // Save request to localStorage and redirect to loading page
+                localStorage.setItem('mindmap_request', JSON.stringify({
+                    type: 'file',
+                    fileData: fileData,
+                    fileName: selectedFile.name
+                }));
+                window.location.href = '/static/loading.html';
+            } catch (error) {
+                console.error('Error preparing file:', error);
+                showStatus('Không thể đọc file. Vui lòng thử lại.', true);
+                setLoading(false);
+            }
+        }
+
+        // Generate mindmap from URL - redirect to loading page
+        function generateFromUrl() {
+            const url = urlInput.value.trim();
+            if (!url) {
+                showStatus('Vui lòng nhập URL!', true);
+                return;
+            }
+
+            try {
+                new URL(url); // Validate URL
+            } catch {
+                showStatus('URL không hợp lệ!', true);
+                return;
+            }
+
+            hideUrlModal();
+
+            // Save request to localStorage and redirect to loading page
+            localStorage.setItem('mindmap_request', JSON.stringify({
+                type: 'url',
+                url: url
+            }));
+            window.location.href = '/static/loading.html';
+        }
+
+        // Main generate handler
+        function generateMindmap() {
+            if (selectedFile) {
+                generateFromFile();
+            } else {
+                generateFromText();
+            }
+        }
+
+        // Event Listeners
+        textInput.addEventListener('input', updateCharCount);
+        sendBtn.addEventListener('click', generateMindmap);
+
+        // Web button - show URL modal
+        webBtn.addEventListener('click', showUrlModal);
+
+        // File button - trigger file picker
+        fileBtn.addEventListener('click', () => fileInput.click());
+
+        // File input change
+        fileInput.addEventListener('change', (e) => {
+            handleFileSelect(e.target.files[0]);
+        });
+
+        // File remove
+        fileRemove.addEventListener('click', clearFile);
+
+        // URL modal events
+        urlCancelBtn.addEventListener('click', hideUrlModal);
+        urlSubmitBtn.addEventListener('click', generateFromUrl);
+        urlInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') generateFromUrl();
+            if (e.key === 'Escape') hideUrlModal();
+        });
+
+        // Close modal on overlay click
+        urlModal.addEventListener('click', (e) => {
+            if (e.target === urlModal) hideUrlModal();
+        });
+
+        // Keyboard shortcut: Ctrl+Enter to generate
+        textInput.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key === 'Enter') generateMindmap();
+        });
+
+        // Auto-resize textarea
+        textInput.addEventListener('input', () => {
+            textInput.style.height = 'auto';
+            textInput.style.height = Math.min(textInput.scrollHeight, 300) + 'px';
+        });
+
+        // Clear file when user types in textarea
+        textInput.addEventListener('input', () => {
+            if (selectedFile && textInput.value.trim()) {
+                clearFile();
+            }
+        });
+
+        // Initialize
+        updateCharCount();
+    </script>
+</body>
+</html>
